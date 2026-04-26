@@ -20,11 +20,11 @@ enum EventType {
 }
 
 enum EventDifficulty {
-  one
-  two
-  three
-  four
-  five
+  easy
+  moderate
+  medium
+  hard
+  veryHard
 }
 
 enum EventState {
