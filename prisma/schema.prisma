@@ -13,25 +13,25 @@ datasource db {
 }
 
 enum EventType {
-  offRoad
-  onRoad
-  exhibition
-  charitable
+  OFF_ROAD
+  ON_ROAD
+  EXHIBITION
+  CHARITABLE
 }
 
 enum EventDifficulty {
-  easy
-  moderate
-  medium
-  hard
-  veryHard
+  EASY
+  MODERATE
+  MEDIUM
+  HARD
+  VERY_HARD
 }
 
 enum EventState {
-  scheduled
-  inProgress
-  cancelled
-  finished
+  SCHEDULED
+  IN_PROGRESS
+  CANCELLED
+  FINISHED
 }
 
 model Event {

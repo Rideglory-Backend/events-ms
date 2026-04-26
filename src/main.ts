@@ -23,7 +23,7 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
     transform: true,
   }));
-  
+
   app.useGlobalFilters(new RpcAllExceptionsFilter());
 
   await app.listen();

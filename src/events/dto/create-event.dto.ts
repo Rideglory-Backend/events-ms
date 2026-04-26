@@ -42,5 +42,5 @@ export class CreateEventDto {
     imageUrl?: string;
     @IsEnum(EventState)
     @IsOptional()
-    state: EventState = EventState.scheduled;
+    state: EventState = EventState.SCHEDULED;
 }
