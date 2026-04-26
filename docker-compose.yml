@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  events-db:
+    container_name: events-db
+    image: postgres:16.2
+    restart: always
+    volumes:
+      - ./postgress:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=events

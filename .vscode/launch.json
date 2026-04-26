@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Events MS",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run start -- --debug 9231 --watch",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
