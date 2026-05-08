@@ -23,6 +23,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@rideglory/common-lib": "file:../rideglory-common-lib",
+    "@rideglory/contracts": "file:../rideglory-contracts",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/mapped-types": "*",

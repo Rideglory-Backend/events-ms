@@ -1,8 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { EventsService } from './events.service';
-import { CreateEventDto } from './dto/create-event.dto';
-import { UpdateEventDto } from './dto/update-event.dto';
+import { CreateEventDto, UpdateEventPayloadDto } from '@rideglory/contracts';
 
 @Controller()
 export class EventsController {
@@ -18,18 +17,29 @@ export class EventsController {
     return this.eventsService.findAll();
   }
 
+  @MessagePattern('findEventsByOwnerId')
+  findByOwnerId(@Payload('ownerId') ownerId: string) {
+    return this.eventsService.findByOwnerId(ownerId);
+  }
+
+  @MessagePattern('findUpcomingEvents')
+  findUpcoming(@Payload('limit') limit?: number) {
+    return this.eventsService.findUpcoming(limit);
+  }
+
   @MessagePattern('findOneEvent')
   findOne(@Payload() id: string) {
     return this.eventsService.findOne(id);
   }
 
   @MessagePattern('updateEvent')
-  update(@Payload() updateEventDto: UpdateEventDto) {
-    return this.eventsService.update(updateEventDto.id, updateEventDto);
+  update(@Payload() updateEventDto: UpdateEventPayloadDto) {
+    const { id, ...data } = updateEventDto;
+    return this.eventsService.update(id, data);
   }
 
   @MessagePattern('removeEvent')
   remove(@Payload() id: string) {
-    return { id };
+    return this.eventsService.remove(id);
   }
 }

@@ -5,7 +5,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { envs } from './config';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { Transport } from '@nestjs/microservices';
-import { RpcAllExceptionsFilter } from './common/filters/rpc-all-exceptions.filter';
+import { RpcAllExceptionsFilter } from '@rideglory/common-lib';
 
 async function bootstrap() {
 
@@ -19,8 +19,6 @@ async function bootstrap() {
   });
 
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
     transform: true,
   }));
 
