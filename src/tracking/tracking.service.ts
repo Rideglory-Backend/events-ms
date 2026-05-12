@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import {
   EventState,
@@ -14,6 +14,7 @@ type RiderPlain = Record<string, unknown>;
 
 @Injectable()
 export class TrackingService {
+  private readonly logger = new Logger(TrackingService.name);
   private readonly ridersByEvent = new Map<string, Map<string, RiderTrackingDto>>();
 
   constructor(private readonly eventsService: EventsService) {}
@@ -38,6 +39,9 @@ export class TrackingService {
     const room = this.getOrCreateRoom(eventId);
     const normalized = this.normalizeRider(rider);
     room.set(normalized.userId, normalized);
+    this.logger.log(
+      `startSession eventId=${eventId} userId=${normalized.userId} roomSize=${room.size}`,
+    );
     return { ok: true as const };
   }
 
@@ -56,6 +60,9 @@ export class TrackingService {
     if (room?.size === 0) {
       this.ridersByEvent.delete(eventId);
     }
+    this.logger.log(
+      `stopSession eventId=${eventId} userId=${userId} roomSize=${room?.size ?? 0}`,
+    );
     return { ok: true as const };
   }
 
@@ -63,8 +70,10 @@ export class TrackingService {
     await this.eventsService.findOne(payload.eventId);
     const room = this.ridersByEvent.get(payload.eventId);
     if (!room) {
+      this.logger.log(`snapshot eventId=${payload.eventId} roomSize=0`);
       return [];
     }
+    this.logger.log(`snapshot eventId=${payload.eventId} roomSize=${room.size}`);
     return [...room.values()].map((rider) => this.serializeRider(rider));
   }
 
@@ -88,7 +97,13 @@ export class TrackingService {
     }
 
     const room = this.ridersByEvent.get(eventId);
-    const existing = room?.get(userId);
+    if (!room) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Start a tracking session before sending location updates',
+      });
+    }
+    const existing = room.get(userId);
     if (!existing) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
@@ -106,7 +121,10 @@ export class TrackingService {
       batteryPercent: payload.batteryPercent,
       lastUpdated: new Date(),
     };
-    room!.set(userId, updated);
+    room.set(userId, updated);
+    this.logger.log(
+      `updateLocation eventId=${eventId} userId=${userId} roomSize=${room.size}`,
+    );
     return this.serializeRider(updated);
   }
 
@@ -144,8 +162,7 @@ export class TrackingService {
   private serializeRider(rider: RiderTrackingDto): RiderPlain {
     return {
       userId: rider.userId,
-      firstName: rider.firstName,
-      lastName: rider.lastName,
+      fullName: rider.fullName,
       role: rider.role,
       latitude: rider.latitude,
       longitude: rider.longitude,

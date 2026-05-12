@@ -1,10 +1,14 @@
 import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { CreateEventDto, UpdateEventDto } from '@rideglory/contracts';
+import { CreateEventDto, RegistrationStatus, UpdateEventDto } from '@rideglory/contracts';
 import { PrismaClient } from '../generated/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { USERS_SERVICE } from '../config';
+import {
+  buildOwnerAutoRegistrationCreate,
+  type OwnerProfileForRegistration,
+} from './owner-auto-registration';
 
 @Injectable()
 export class EventsService extends PrismaClient implements OnModuleInit {
@@ -43,10 +47,38 @@ export class EventsService extends PrismaClient implements OnModuleInit {
   }
 
   async create(createEventDto: CreateEventDto) {
-    await this.validateOwnerExists(createEventDto.ownerId);
+    let ownerProfile: OwnerProfileForRegistration;
+    try {
+      ownerProfile = (await firstValueFrom(
+        this.usersService
+          .send('findOneUser', { id: createEventDto.ownerId })
+          .pipe(timeout(3000)),
+      )) as OwnerProfileForRegistration;
+    } catch {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: `Owner user with id ${createEventDto.ownerId} does not exist`,
+      });
+    }
 
-    return this.event.create({
-      data: createEventDto
+    const ownerRegistrationFields = buildOwnerAutoRegistrationCreate(
+      createEventDto.ownerId,
+      ownerProfile,
+    );
+
+    return this.$transaction(async (tx) => {
+      return tx.event.create({
+        data: {
+          ...createEventDto,
+          registrations: {
+            create: {
+              userId: createEventDto.ownerId,
+              status: RegistrationStatus.APPROVED,
+              ...ownerRegistrationFields,
+            },
+          },
+        },
+      });
     });
   }
 

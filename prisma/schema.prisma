@@ -35,8 +35,27 @@ enum EventState {
   FINISHED
 }
 
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  READY_FOR_EDIT
+}
+
+enum BloodType {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
 model Event {
-  id            String          @id @default(uuid())
+  id            String              @id @default(uuid())
   ownerId       String
   name          String
   description   String
@@ -52,6 +71,34 @@ model Event {
   price         Float?
   imageUrl      String?
   state         EventState
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt()
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt()
+  registrations EventRegistration[]
+}
+
+model EventRegistration {
+  id                    String             @id @default(uuid())
+  eventId               String
+  userId                String
+  status                RegistrationStatus @default(PENDING)
+  fullName              String
+  identificationNumber  String
+  birthDate             DateTime
+  phone                 String
+  email                 String
+  residenceCity         String
+  eps                   String
+  medicalInsurance      String?
+  bloodType             BloodType
+  emergencyContactName  String
+  emergencyContactPhone String
+  vehicleId             String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt()
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([status])
 }
