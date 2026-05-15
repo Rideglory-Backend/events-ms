@@ -55,25 +55,28 @@ enum BloodType {
 }
 
 model Event {
-  id            String              @id @default(uuid())
-  ownerId       String
-  name          String
-  description   String
-  city          String
-  startDate     DateTime
-  endDate       DateTime?
-  difficulty    EventDifficulty
-  meetingPoint  String
-  destination   String
-  meetingTime   DateTime
-  eventType     EventType
-  allowedBrands String[]
-  price         Float?
-  imageUrl      String?
-  state         EventState
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt()
-  registrations EventRegistration[]
+  id               String              @id @default(uuid())
+  ownerId          String
+  name             String
+  description      String
+  city             String
+  startDate        DateTime
+  endDate          DateTime?
+  difficulty       EventDifficulty
+  meetingPoint     String
+  destination      String
+  meetingTime      DateTime
+  eventType        EventType
+  allowedBrands    String[]
+  price            Float?
+  imageUrl         String?
+  state            EventState
+  routeGeoJson     Json?
+  sosTriggeredAt   DateTime?
+  reminderSentAt   DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt()
+  registrations    EventRegistration[]
 }
 
 model EventRegistration {

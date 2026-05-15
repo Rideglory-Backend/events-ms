@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { EventsService } from './events.service';
-import { CreateEventDto, UpdateEventPayloadDto } from '@rideglory/contracts';
+import { CreateEventDto, FindAllEventsPayloadDto, FindUpcomingEventsPayloadDto, UpdateEventPayloadDto } from '@rideglory/contracts';
 
 @Controller()
 export class EventsController {
@@ -13,8 +13,8 @@ export class EventsController {
   }
 
   @MessagePattern('findAllEvents')
-  findAll() {
-    return this.eventsService.findAll();
+  findAll(@Payload() filters: FindAllEventsPayloadDto) {
+    return this.eventsService.findAll(filters);
   }
 
   @MessagePattern('findEventsByOwnerId')
@@ -23,8 +23,9 @@ export class EventsController {
   }
 
   @MessagePattern('findUpcomingEvents')
-  findUpcoming(@Payload('limit') limit?: number) {
-    return this.eventsService.findUpcoming(limit);
+  findUpcoming(@Payload() payload: FindUpcomingEventsPayloadDto) {
+    const { limit, ...filters } = payload ?? {};
+    return this.eventsService.findUpcoming(filters, limit);
   }
 
   @MessagePattern('findOneEvent')
@@ -41,5 +42,43 @@ export class EventsController {
   @MessagePattern('removeEvent')
   remove(@Payload() id: string) {
     return this.eventsService.remove(id);
+  }
+
+  @MessagePattern('trackingStart')
+  startTracking(@Payload() payload: { eventId: string; authUserId: string }) {
+    return this.eventsService.startTracking(payload.eventId, payload.authUserId);
+  }
+
+  @MessagePattern('trackingEnd')
+  endTracking(@Payload() payload: { eventId: string; authUserId: string }) {
+    return this.eventsService.endTracking(payload.eventId, payload.authUserId);
+  }
+
+  @MessagePattern('getRouteGeoJson')
+  getRouteGeoJson(@Payload() payload: { eventId: string }) {
+    return this.eventsService.getRouteGeoJson(payload.eventId);
+  }
+
+  @MessagePattern('markSosTriggered')
+  markSosTriggered(@Payload() payload: { eventId: string; userId: string }) {
+    return this.eventsService.markSosTriggered(payload.eventId, payload.userId);
+  }
+
+  @MessagePattern('getApprovedRegistrantUserIds')
+  getApprovedRegistrantUserIds(@Payload() payload: { eventId: string }) {
+    return this.eventsService.getApprovedRegistrantUserIds(payload.eventId);
+  }
+
+  @MessagePattern('markReminderSent')
+  markReminderSent(@Payload() payload: { eventId: string }) {
+    return this.eventsService.markReminderSent(payload.eventId);
+  }
+
+  @MessagePattern('findEventsNeedingReminder')
+  findEventsNeedingReminder(@Payload() payload: { fromDate: string; toDate: string }) {
+    return this.eventsService.findEventsNeedingReminder(
+      new Date(payload.fromDate),
+      new Date(payload.toDate),
+    );
   }
 }
