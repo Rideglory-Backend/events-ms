@@ -14,10 +14,12 @@ datasource db {
 }
 
 enum EventType {
+  TOURISM
+  URBAN
   OFF_ROAD
-  ON_ROAD
-  EXHIBITION
-  CHARITABLE
+  COMPETITION
+  SOLIDARITY
+  SHORT_DISTANCE
 }
 
 enum EventDifficulty {
@@ -69,6 +71,7 @@ model Event {
   eventType        EventType
   allowedBrands    String[]
   price            Float?
+  maxParticipants  Int?
   imageUrl         String?
   state            EventState
   routeGeoJson     Json?
