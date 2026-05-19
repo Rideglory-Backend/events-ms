@@ -1,12 +1,20 @@
-const http = require('http');
+const net = require('net');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 
-const req = http.request(
-  { host: 'localhost', port: PORT, path: '/health', timeout: 4000 },
-  (res) => process.exit(res.statusCode === 200 ? 0 : 1),
-);
+const socket = new net.Socket();
+socket.setTimeout(4000);
 
-req.on('error', () => process.exit(1));
-req.on('timeout', () => { req.destroy(); process.exit(1); });
-req.end();
+socket
+  .connect(PORT, 'localhost', () => {
+    socket.destroy();
+    process.exit(0);
+  })
+  .on('error', () => {
+    socket.destroy();
+    process.exit(1);
+  })
+  .on('timeout', () => {
+    socket.destroy();
+    process.exit(1);
+  });

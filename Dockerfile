@@ -39,4 +39,4 @@ EXPOSE 3003
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node healthcheck.js
 
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/src/main"]
