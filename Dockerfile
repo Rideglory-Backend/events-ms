@@ -1,13 +1,13 @@
 # ── Stage 1: BUILD ────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
-WORKDIR /build/events-ms
-
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-COPY rideglory-common-lib ../rideglory-common-lib
-COPY rideglory-contracts ../rideglory-contracts
+WORKDIR /build
+COPY rideglory-common-lib ./rideglory-common-lib
+COPY rideglory-contracts ./rideglory-contracts
 
+WORKDIR /build/events-ms
 COPY events-ms/package.json events-ms/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -18,13 +18,13 @@ RUN pnpm build
 # ── Stage 2: RUNTIME ──────────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
 
-WORKDIR /build/events-ms
-
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-COPY rideglory-common-lib ../rideglory-common-lib
-COPY rideglory-contracts ../rideglory-contracts
+WORKDIR /build
+COPY rideglory-common-lib ./rideglory-common-lib
+COPY rideglory-contracts ./rideglory-contracts
 
+WORKDIR /build/events-ms
 COPY events-ms/package.json events-ms/pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 
