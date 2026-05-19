@@ -2,7 +2,7 @@
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
-CREATE TYPE "EventType" AS ENUM ('OFF_ROAD', 'ON_ROAD', 'EXHIBITION', 'CHARITABLE');
+CREATE TYPE "EventType" AS ENUM ('TOURISM', 'URBAN', 'OFF_ROAD', 'COMPETITION', 'SOLIDARITY', 'SHORT_DISTANCE');
 
 -- CreateEnum
 CREATE TYPE "EventDifficulty" AS ENUM ('EASY', 'MODERATE', 'MEDIUM', 'HARD', 'VERY_HARD');
@@ -32,8 +32,12 @@ CREATE TABLE "Event" (
     "eventType" "EventType" NOT NULL,
     "allowedBrands" TEXT[],
     "price" DOUBLE PRECISION,
+    "maxParticipants" INTEGER,
     "imageUrl" TEXT,
     "state" "EventState" NOT NULL,
+    "routeGeoJson" JSONB,
+    "sosTriggeredAt" TIMESTAMP(3),
+    "reminderSentAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -57,10 +61,7 @@ CREATE TABLE "EventRegistration" (
     "bloodType" "BloodType" NOT NULL,
     "emergencyContactName" TEXT NOT NULL,
     "emergencyContactPhone" TEXT NOT NULL,
-    "vehicleBrand" TEXT NOT NULL,
-    "vehicleReference" TEXT NOT NULL,
-    "licensePlate" TEXT NOT NULL,
-    "vin" TEXT,
+    "vehicleId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
