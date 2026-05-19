@@ -30,6 +30,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.7.0",
+    "@prisma/client-runtime-utils": "^7.8.0",
     "@rideglory/common-lib": "file:../rideglory-common-lib",
     "@rideglory/contracts": "file:../rideglory-contracts",
     "class-transformer": "^0.5.1",
