@@ -29,6 +29,7 @@ WORKDIR /build/events-ms
 COPY --from=builder /build/events-ms/node_modules ./node_modules
 COPY --from=builder /build/events-ms/dist ./dist
 COPY events-ms/prisma ./prisma
+COPY events-ms/prisma.config.ts ./prisma.config.ts
 COPY events-ms/healthcheck.js ./healthcheck.js
 
 USER node
