@@ -36,7 +36,7 @@ async function main() {
       name: 'Rodada Cordillera Oriental 2026',
       description: 'Recorrido épico por la cordillera oriental colombiana',
       city: 'Bogotá',
-      eventType: 'ON_ROAD',
+      eventType: 'TOURISM',
       difficulty: 'MODERATE',
       state: 'SCHEDULED',
       startDate: new Date('2026-06-15T07:00:00Z'),
