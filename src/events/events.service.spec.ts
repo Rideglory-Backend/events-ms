@@ -65,28 +65,28 @@ describe('EventsService — filter logic', () => {
   // findAll — 5 required test cases
   // ----------------------------------------------------------------
 
-  it('TC-1: no filters — returns all events (backward compat)', async () => {
+  it('TC-1: no filters — returns all events excluding drafts', async () => {
     await service.findAll({});
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {},
+        where: { state: { not: 'DRAFT' } },
         orderBy: { startDate: 'asc' },
       }),
     );
   });
 
-  it('TC-2: type-only filter — WHERE eventType matches', async () => {
+  it('TC-2: type-only filter — WHERE eventType matches and drafts excluded', async () => {
     await service.findAll({ type: EventType.OFF_ROAD });
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { eventType: EventType.OFF_ROAD },
+        where: { state: { not: 'DRAFT' }, eventType: EventType.OFF_ROAD },
       }),
     );
   });
 
-  it('TC-3: date-range-only filter — WHERE startDate between dateFrom and dateTo', async () => {
+  it('TC-3: date-range-only filter — WHERE startDate between dateFrom and dateTo, drafts excluded', async () => {
     const dateFrom = '2026-05-20T00:00:00.000Z';
     const dateTo = '2026-06-01T00:00:00.000Z';
 
@@ -95,6 +95,7 @@ describe('EventsService — filter logic', () => {
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
+          state: { not: 'DRAFT' },
           startDate: {
             gte: new Date(dateFrom),
             lte: new Date(dateTo),
@@ -104,27 +105,29 @@ describe('EventsService — filter logic', () => {
     );
   });
 
-  it('TC-4: city-only filter — WHERE city contains (case-insensitive)', async () => {
+  it('TC-4: city-only filter — WHERE city contains (case-insensitive), drafts excluded', async () => {
     await service.findAll({ city: 'Medell' });
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
+          state: { not: 'DRAFT' },
           city: { contains: 'Medell', mode: 'insensitive' },
         },
       }),
     );
   });
 
-  it('TC-5: combined filter (type + dateFrom + city) — all conditions ANDed', async () => {
+  it('TC-5: combined filter (type + dateFrom + city) — all conditions ANDed, drafts excluded', async () => {
     const dateFrom = '2026-05-20T00:00:00.000Z';
 
-    await service.findAll({ type: EventType.ON_ROAD, dateFrom, city: 'Bogotá' });
+    await service.findAll({ type: EventType.URBAN, dateFrom, city: 'Bogotá' });
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          eventType: EventType.ON_ROAD,
+          state: { not: 'DRAFT' },
+          eventType: EventType.URBAN,
           startDate: { gte: new Date(dateFrom) },
           city: { contains: 'Bogotá', mode: 'insensitive' },
         },
@@ -136,7 +139,7 @@ describe('EventsService — filter logic', () => {
   // findUpcoming — additional coverage
   // ----------------------------------------------------------------
 
-  it('TC-6: findUpcoming no filters — uses current date as gte baseline', async () => {
+  it('TC-6: findUpcoming no filters — uses current date as gte baseline, drafts excluded', async () => {
     const before = new Date();
     await service.findUpcoming({}, 5);
     const after = new Date();
@@ -148,26 +151,31 @@ describe('EventsService — filter logic', () => {
     expect(usedDate.getTime()).toBeGreaterThanOrEqual(before.getTime() - 100);
     expect(usedDate.getTime()).toBeLessThanOrEqual(after.getTime() + 100);
     expect(callArg.take).toBe(5);
+    expect(callArg.where.state).toEqual({ not: 'DRAFT' });
   });
 
-  it('TC-7: findUpcoming with type filter — eventType present in WHERE', async () => {
-    await service.findUpcoming({ type: EventType.CHARITABLE }, 10);
+  it('TC-7: findUpcoming with type filter — eventType present in WHERE, drafts excluded', async () => {
+    await service.findUpcoming({ type: EventType.SOLIDARITY }, 10);
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ eventType: EventType.CHARITABLE }),
+        where: expect.objectContaining({
+          state: { not: 'DRAFT' },
+          eventType: EventType.SOLIDARITY,
+        }),
         take: 10,
       }),
     );
   });
 
-  it('TC-8: findUpcoming with dateFrom override — uses provided dateFrom instead of now', async () => {
+  it('TC-8: findUpcoming with dateFrom override — uses provided dateFrom instead of now, drafts excluded', async () => {
     const dateFrom = '2026-07-01T00:00:00.000Z';
     await service.findUpcoming({ dateFrom }, 5);
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
+          state: { not: 'DRAFT' },
           startDate: { gte: new Date(dateFrom) },
         }),
       }),

@@ -31,6 +31,7 @@ enum EventDifficulty {
 }
 
 enum EventState {
+  DRAFT
   SCHEDULED
   IN_PROGRESS
   CANCELLED
@@ -70,6 +71,7 @@ model Event {
   meetingTime      DateTime
   eventType        EventType
   allowedBrands    String[]
+  waypoints        String[]            @default([])
   price            Float?
   maxParticipants  Int?
   imageUrl         String?

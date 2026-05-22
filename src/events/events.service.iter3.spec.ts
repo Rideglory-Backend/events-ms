@@ -173,6 +173,73 @@ describe('EventsService — iter-3 tracking methods', () => {
 
   // ── markSosTriggered ──────────────────────────────────────────────────────────
 
+  // ── findOneEventForViewer ─────────────────────────────────────────────────────
+
+  describe('findOneEventForViewer', () => {
+    it('TC-3-12: returns event when state is SCHEDULED (any viewer)', async () => {
+      mockEventInDb({ state: 'SCHEDULED', ownerId: 'user-organizer' });
+
+      const result = await service.findOneEventForViewer('event-1', 'user-other');
+
+      expect(result).toMatchObject({ id: 'event-1', state: 'SCHEDULED' });
+    });
+
+    it('TC-3-13: returns draft event when viewer is the owner', async () => {
+      mockEventInDb({ state: 'DRAFT', ownerId: 'user-organizer' });
+
+      const result = await service.findOneEventForViewer('event-1', 'user-organizer');
+
+      expect(result).toMatchObject({ id: 'event-1', state: 'DRAFT' });
+    });
+
+    it('TC-3-14: throws 404 when event is DRAFT and viewer is not the owner', async () => {
+      mockEventInDb({ state: 'DRAFT', ownerId: 'user-organizer' });
+
+      await expect(
+        service.findOneEventForViewer('event-1', 'user-other'),
+      ).rejects.toThrow(RpcException);
+    });
+  });
+
+  // ── publishEvent ──────────────────────────────────────────────────────────────
+
+  describe('publishEvent', () => {
+    it('TC-3-15: transitions DRAFT → SCHEDULED when owner publishes', async () => {
+      mockEventInDb({ state: 'DRAFT', ownerId: 'user-organizer' });
+
+      const result = await service.publishEvent('event-1', 'user-organizer');
+
+      expect(result).toMatchObject({ state: 'SCHEDULED' });
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { state: 'SCHEDULED' } }),
+      );
+    });
+
+    it('TC-3-16: throws 403 when non-owner tries to publish', async () => {
+      mockEventInDb({ state: 'DRAFT', ownerId: 'user-organizer' });
+
+      await expect(
+        service.publishEvent('event-1', 'user-other'),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('TC-3-17: throws 409 when event is already SCHEDULED (not a draft)', async () => {
+      mockEventInDb({ state: 'SCHEDULED', ownerId: 'user-organizer' });
+
+      await expect(
+        service.publishEvent('event-1', 'user-organizer'),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('TC-3-18: throws 409 when event is IN_PROGRESS', async () => {
+      mockEventInDb({ state: 'IN_PROGRESS', ownerId: 'user-organizer' });
+
+      await expect(
+        service.publishEvent('event-1', 'user-organizer'),
+      ).rejects.toThrow(RpcException);
+    });
+  });
+
   describe('markSosTriggered', () => {
     it('TC-3-10: sets sosTriggeredAt and returns triggered=true on first SOS', async () => {
       mockEventInDb({ sosTriggeredAt: null });

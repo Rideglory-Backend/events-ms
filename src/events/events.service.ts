@@ -1,6 +1,6 @@
 import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CreateEventDto, EventFilterDto, EventState, RegistrationStatus, UpdateEventDto } from '@rideglory/contracts';
-import { PrismaClient } from '../generated/prisma';
+import { Prisma, PrismaClient } from '../generated/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
@@ -66,10 +66,15 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       ownerProfile,
     );
 
+    const { routeGeoJson, ...rest } = createEventDto;
+
     return this.$transaction(async (tx) => {
       return tx.event.create({
         data: {
-          ...createEventDto,
+          ...rest,
+          ...(routeGeoJson !== undefined && {
+            routeGeoJson: routeGeoJson as Prisma.InputJsonValue,
+          }),
           registrations: {
             create: {
               userId: createEventDto.ownerId,
@@ -94,6 +99,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
     return this.event.findMany({
       where: {
+        state: { not: EventState.DRAFT },
         ...(type && { eventType: type }),
         ...(city && { city: { contains: city, mode: 'insensitive' } }),
         ...(startDateFilter && { startDate: startDateFilter }),
@@ -113,6 +119,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     const { type, dateFrom, dateTo, city } = filters;
     return this.event.findMany({
       where: {
+        state: { not: EventState.DRAFT },
         startDate: {
           gte: dateFrom ? new Date(dateFrom) : new Date(),
           ...(dateTo && { lte: new Date(dateTo) }),
@@ -140,6 +147,37 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     return event;
   }
 
+  async findOneEventForViewer(id: string, authUserId: string) {
+    const event = await this.findOne(id);
+    if (event.state === EventState.DRAFT && event.ownerId !== authUserId) {
+      throw new RpcException({
+        status: HttpStatus.NOT_FOUND,
+        message: `Event with id ${id} not found`,
+      });
+    }
+    return event;
+  }
+
+  async publishEvent(id: string, ownerId: string) {
+    const event = await this.findOne(id);
+    if (event.ownerId !== ownerId) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: 'Only the event organizer can publish this event',
+      });
+    }
+    if (event.state !== EventState.DRAFT) {
+      throw new RpcException({
+        status: HttpStatus.CONFLICT,
+        message: `Cannot publish: event state is ${event.state}, expected DRAFT`,
+      });
+    }
+    return this.event.update({
+      where: { id },
+      data: { state: EventState.SCHEDULED },
+    });
+  }
+
   async update(id: string, updateEventDto: UpdateEventDto) {
     if (updateEventDto.ownerId) {
       await this.validateOwnerExists(updateEventDto.ownerId);
@@ -147,9 +185,16 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
     await this.findOne(id);
 
+    const { routeGeoJson, ...restUpdate } = updateEventDto;
+
     return this.event.update({
       where: { id },
-      data: updateEventDto
+      data: {
+        ...restUpdate,
+        ...(routeGeoJson !== undefined && {
+          routeGeoJson: routeGeoJson as Prisma.InputJsonValue,
+        }),
+      },
     });
   }
 

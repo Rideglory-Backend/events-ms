@@ -33,6 +33,16 @@ export class EventsController {
     return this.eventsService.findOne(id);
   }
 
+  @MessagePattern('findOneEventForViewer')
+  findOneForViewer(@Payload() payload: { id: string; authUserId: string }) {
+    return this.eventsService.findOneEventForViewer(payload.id, payload.authUserId);
+  }
+
+  @MessagePattern('publishEvent')
+  publishEvent(@Payload() payload: { id: string; ownerId: string }) {
+    return this.eventsService.publishEvent(payload.id, payload.ownerId);
+  }
+
   @MessagePattern('updateEvent')
   update(@Payload() updateEventDto: UpdateEventPayloadDto) {
     const { id, ...data } = updateEventDto;

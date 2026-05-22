@@ -32,6 +32,10 @@ COPY events-ms/prisma ./prisma
 COPY events-ms/prisma.config.ts ./prisma.config.ts
 COPY events-ms/healthcheck.js ./healthcheck.js
 
+RUN for d in node_modules/.pnpm/@prisma+client-runtime-utils@*/node_modules/@prisma/client-runtime-utils; do \
+      [ -d "$d" ] && cp -r "$d" node_modules/@prisma/client-runtime-utils && break; \
+    done
+
 USER node
 
 EXPOSE 3003
