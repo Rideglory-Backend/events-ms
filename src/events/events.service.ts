@@ -1,5 +1,5 @@
 import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { CreateEventDto, EventFilterDto, EventState, RegistrationStatus, UpdateEventDto } from '@rideglory/contracts';
+import { CreateEventDto, EventFilterDto, FindAllEventsPayloadDto, EventState, RegistrationStatus, UpdateEventDto } from '@rideglory/contracts';
 import { Prisma, PrismaClient } from '../generated/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
@@ -87,8 +87,8 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  findAll(filters: EventFilterDto = {}) {
-    const { type, dateFrom, dateTo, city } = filters;
+  findAll(filters: FindAllEventsPayloadDto = {}) {
+    const { type, dateFrom, dateTo, city, authUserId } = filters;
     const startDateFilter =
       dateFrom || dateTo
         ? {
@@ -97,9 +97,38 @@ export class EventsService extends PrismaClient implements OnModuleInit {
           }
         : undefined;
 
+    // Eventos IN_PROGRESS solo son visibles para el owner o usuarios con inscripción aprobada.
+    // En todos los casos se excluyen los DRAFTs del listado general.
+    // SQL resultante con authUserId:
+    //   WHERE (state NOT IN ('DRAFT','IN_PROGRESS'))
+    //      OR (state = 'IN_PROGRESS' AND (ownerId = ? OR registrations.some(userId=?, status=APPROVED)))
+    const inProgressVisibilityClause = authUserId
+      ? {
+          OR: [
+            // Eventos visibles para todos: no DRAFT y no IN_PROGRESS
+            { state: { notIn: [EventState.DRAFT, EventState.IN_PROGRESS] } },
+            // Eventos IN_PROGRESS solo para owner o inscrito aprobado
+            {
+              state: EventState.IN_PROGRESS,
+              OR: [
+                { ownerId: authUserId },
+                {
+                  registrations: {
+                    some: {
+                      userId: authUserId,
+                      status: RegistrationStatus.APPROVED,
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }
+      : { state: { notIn: [EventState.DRAFT, EventState.IN_PROGRESS] } };
+
     return this.event.findMany({
       where: {
-        state: { not: EventState.DRAFT },
+        ...inProgressVisibilityClause,
         ...(type && { eventType: type }),
         ...(city && { city: { contains: city, mode: 'insensitive' } }),
         ...(startDateFilter && { startDate: startDateFilter }),
