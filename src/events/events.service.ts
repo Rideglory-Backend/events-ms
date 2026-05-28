@@ -42,6 +42,41 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     }
   }
 
+  private async fetchOwnerName(ownerId: string): Promise<string | null> {
+    try {
+      const owner = (await firstValueFrom(
+        this.usersService.send('findOneUser', { id: ownerId }).pipe(timeout(3000)),
+      )) as { fullName?: string | null } | null;
+      return owner?.fullName ?? null;
+    } catch (error) {
+      this.logger.warn(`Failed to resolve ownerName for ${ownerId}: ${String(error)}`);
+      return null;
+    }
+  }
+
+  private async withOwnerName<T extends { ownerId: string }>(
+    event: T,
+  ): Promise<T & { ownerName: string | null }> {
+    const ownerName = await this.fetchOwnerName(event.ownerId);
+    return { ...event, ownerName };
+  }
+
+  private async withOwnerNames<T extends { ownerId: string }>(
+    events: T[],
+  ): Promise<Array<T & { ownerName: string | null }>> {
+    const uniqueOwnerIds = Array.from(new Set(events.map((event) => event.ownerId)));
+    const ownerNameById = new Map<string, string | null>();
+    await Promise.all(
+      uniqueOwnerIds.map(async (ownerId) => {
+        ownerNameById.set(ownerId, await this.fetchOwnerName(ownerId));
+      }),
+    );
+    return events.map((event) => ({
+      ...event,
+      ownerName: ownerNameById.get(event.ownerId) ?? null,
+    }));
+  }
+
   async onModuleInit() {
     await this.$connect();
   }
@@ -68,7 +103,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
     const { routeGeoJson, ...rest } = createEventDto;
 
-    return this.$transaction(async (tx) => {
+    const created = await this.$transaction(async (tx) => {
       return tx.event.create({
         data: {
           ...rest,
@@ -85,9 +120,14 @@ export class EventsService extends PrismaClient implements OnModuleInit {
         },
       });
     });
+
+    return {
+      ...created,
+      ownerName: ownerProfile?.fullName ?? null,
+    };
   }
 
-  findAll(filters: FindAllEventsPayloadDto = {}) {
+  async findAll(filters: FindAllEventsPayloadDto = {}) {
     const { type, dateFrom, dateTo, city, authUserId } = filters;
     const startDateFilter =
       dateFrom || dateTo
@@ -126,7 +166,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
         }
       : { state: { notIn: [EventState.DRAFT, EventState.IN_PROGRESS] } };
 
-    return this.event.findMany({
+    const events = await this.event.findMany({
       where: {
         ...inProgressVisibilityClause,
         ...(type && { eventType: type }),
@@ -135,18 +175,20 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       },
       orderBy: { startDate: 'asc' },
     });
+    return this.withOwnerNames(events);
   }
 
-  findByOwnerId(ownerId: string) {
-    return this.event.findMany({
+  async findByOwnerId(ownerId: string) {
+    const events = await this.event.findMany({
       where: { ownerId },
       orderBy: { startDate: 'asc' },
     });
+    return this.withOwnerNames(events);
   }
 
-  findUpcoming(filters: EventFilterDto = {}, limit = 5) {
+  async findUpcoming(filters: EventFilterDto = {}, limit = 5) {
     const { type, dateFrom, dateTo, city } = filters;
-    return this.event.findMany({
+    const events = await this.event.findMany({
       where: {
         state: { not: EventState.DRAFT },
         startDate: {
@@ -159,6 +201,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       orderBy: { startDate: 'asc' },
       take: limit,
     });
+    return this.withOwnerNames(events);
   }
 
   async findOne(id: string) {
@@ -176,6 +219,11 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     return event;
   }
 
+  async findOneEnriched(id: string) {
+    const event = await this.findOne(id);
+    return this.withOwnerName(event);
+  }
+
   async findOneEventForViewer(id: string, authUserId: string) {
     const event = await this.findOne(id);
     if (event.state === EventState.DRAFT && event.ownerId !== authUserId) {
@@ -184,7 +232,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
         message: `Event with id ${id} not found`,
       });
     }
-    return event;
+    return this.withOwnerName(event);
   }
 
   async publishEvent(id: string, ownerId: string) {
@@ -201,10 +249,11 @@ export class EventsService extends PrismaClient implements OnModuleInit {
         message: `Cannot publish: event state is ${event.state}, expected DRAFT`,
       });
     }
-    return this.event.update({
+    const updated = await this.event.update({
       where: { id },
       data: { state: EventState.SCHEDULED },
     });
+    return this.withOwnerName(updated);
   }
 
   async update(id: string, updateEventDto: UpdateEventDto) {
@@ -216,7 +265,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
     const { routeGeoJson, ...restUpdate } = updateEventDto;
 
-    return this.event.update({
+    const updated = await this.event.update({
       where: { id },
       data: {
         ...restUpdate,
@@ -225,6 +274,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
         }),
       },
     });
+    return this.withOwnerName(updated);
   }
 
   async remove(id: string) {

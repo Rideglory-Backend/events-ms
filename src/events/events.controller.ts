@@ -30,7 +30,7 @@ export class EventsController {
 
   @MessagePattern('findOneEvent')
   findOne(@Payload() id: string) {
-    return this.eventsService.findOne(id);
+    return this.eventsService.findOneEnriched(id);
   }
 
   @MessagePattern('findOneEventForViewer')
