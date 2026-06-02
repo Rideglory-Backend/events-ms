@@ -372,13 +372,67 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       where: { eventId, userId },
     });
 
+    const fullName = await this.resolveRiderName(
+      userId,
+      registration?.fullName,
+    );
+
     return {
       triggered: true,
-      fullName: registration?.fullName ?? userId,
+      fullName,
       phone: registration?.phone ?? null,
       latitude: null, // Location comes from WS room state in gateway
       longitude: null,
     };
+  }
+
+  private async resolveRiderName(
+    userId: string,
+    registrationFullName?: string | null,
+  ): Promise<string> {
+    const fromRegistration = (registrationFullName ?? '').trim();
+    if (fromRegistration.length > 0) {
+      return fromRegistration;
+    }
+
+    try {
+      const user = (await firstValueFrom(
+        this.usersService
+          .send('findOneUser', { id: userId })
+          .pipe(timeout(3000)),
+      )) as { fullName?: string | null; email?: string | null } | null;
+
+      const fromProfile = (user?.fullName ?? '').trim();
+      if (fromProfile.length > 0) {
+        return fromProfile;
+      }
+
+      const emailLocalPart = (user?.email ?? '').split('@')[0].trim();
+      if (emailLocalPart.length > 0) {
+        return emailLocalPart;
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to resolve rider name for ${userId}: ${String(error)}`,
+      );
+    }
+
+    return 'Un rider';
+  }
+
+  async clearSos(eventId: string): Promise<{ cleared: boolean }> {
+    const event = await this.findOne(eventId);
+
+    if (event.sosTriggeredAt === null) {
+      return { cleared: false };
+    }
+
+    await this.event.update({
+      where: { id: eventId },
+      data: { sosTriggeredAt: null },
+    });
+
+    return { cleared: true };
   }
 
   async getApprovedRegistrantUserIds(eventId: string): Promise<string[]> {

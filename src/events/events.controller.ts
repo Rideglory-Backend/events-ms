@@ -74,6 +74,11 @@ export class EventsController {
     return this.eventsService.markSosTriggered(payload.eventId, payload.userId);
   }
 
+  @MessagePattern('clearSos')
+  clearSos(@Payload() payload: { eventId: string; userId: string }) {
+    return this.eventsService.clearSos(payload.eventId);
+  }
+
   @MessagePattern('getApprovedRegistrantUserIds')
   getApprovedRegistrantUserIds(@Payload() payload: { eventId: string }) {
     return this.eventsService.getApprovedRegistrantUserIds(payload.eventId);
