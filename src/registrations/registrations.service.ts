@@ -71,24 +71,26 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
       );
     }
 
-    const createdRegistration = await this.eventRegistration.create({
-      data: {
-        eventId,
-        userId,
-        status: RegistrationStatus.PENDING,
-        fullName: data.fullName,
-        identificationNumber: data.identificationNumber,
-        birthDate: data.birthDate,
-        phone: data.phone,
-        email: data.email,
-        residenceCity: data.residenceCity,
-        eps: data.eps,
-        medicalInsurance: data.medicalInsurance ?? null,
-        bloodType: data.bloodType,
-        emergencyContactName: data.emergencyContactName,
-        emergencyContactPhone: data.emergencyContactPhone,
-        vehicleId: data.vehicleId,
-      },
+    const registrationData = {
+      status: RegistrationStatus.PENDING,
+      fullName: data.fullName,
+      identificationNumber: data.identificationNumber,
+      birthDate: data.birthDate,
+      phone: data.phone,
+      email: data.email,
+      residenceCity: data.residenceCity,
+      eps: data.eps,
+      medicalInsurance: data.medicalInsurance ?? null,
+      bloodType: data.bloodType,
+      emergencyContactName: data.emergencyContactName,
+      emergencyContactPhone: data.emergencyContactPhone,
+      vehicleId: data.vehicleId,
+    };
+
+    const createdRegistration = await this.eventRegistration.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: { eventId, userId, ...registrationData },
+      update: registrationData,
     });
 
     return this.enrichRegistrationWithVehicle(createdRegistration);
