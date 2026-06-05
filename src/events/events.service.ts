@@ -173,7 +173,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
         ...(city && { city: { contains: city, mode: 'insensitive' } }),
         ...(startDateFilter && { startDate: startDateFilter }),
       },
-      orderBy: { startDate: 'asc' },
+      orderBy: { startDate: 'desc' },
     });
     return this.withOwnerNames(events);
   }
@@ -181,7 +181,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
   async findByOwnerId(ownerId: string) {
     const events = await this.event.findMany({
       where: { ownerId },
-      orderBy: { startDate: 'asc' },
+      orderBy: { startDate: 'desc' },
     });
     return this.withOwnerNames(events);
   }
