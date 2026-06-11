@@ -33,6 +33,7 @@
     "@prisma/client-runtime-utils": "^7.8.0",
     "@rideglory/common-lib": "file:../rideglory-common-lib",
     "@rideglory/contracts": "file:../rideglory-contracts",
+    "@sentry/node": "^10.57.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",

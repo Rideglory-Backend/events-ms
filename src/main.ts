@@ -1,3 +1,4 @@
+import './instrument';
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -25,7 +26,7 @@ async function bootstrap() {
     transform: true,
   }));
 
-  app.useGlobalFilters(new RpcAllExceptionsFilter());
+  app.useGlobalFilters(new RpcAllExceptionsFilter('events-ms'));
 
   await app.listen();
 
