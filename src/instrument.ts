@@ -3,6 +3,7 @@
 // NOTE: Do NOT import `envs` here — envs.ts runs joi validation at module-load
 // time, but dotenv/config is imported on line 2 of main.ts (after this file is
 // fully evaluated). Reading process.env directly avoids the premature crash.
+import 'dotenv/config';
 import { initSentry } from '@rideglory/common-lib';
 
 const sentryDsn = process.env['SENTRY_DSN'];
