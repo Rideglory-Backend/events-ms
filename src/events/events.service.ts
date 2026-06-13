@@ -128,7 +128,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
   }
 
   async findAll(filters: FindAllEventsPayloadDto = {}) {
-    const { type, dateFrom, dateTo, city, authUserId } = filters;
+    const { type, dateFrom, dateTo, authUserId } = filters;
     const startDateFilter =
       dateFrom || dateTo
         ? {
@@ -170,7 +170,6 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       where: {
         ...inProgressVisibilityClause,
         ...(type && { eventType: type }),
-        ...(city && { city: { contains: city, mode: 'insensitive' } }),
         ...(startDateFilter && { startDate: startDateFilter }),
       },
       orderBy: { startDate: 'desc' },
@@ -187,7 +186,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
   }
 
   async findUpcoming(filters: EventFilterDto = {}, limit = 5) {
-    const { type, dateFrom, dateTo, city } = filters;
+    const { type, dateFrom, dateTo } = filters;
     const events = await this.event.findMany({
       where: {
         state: { not: EventState.DRAFT },
@@ -196,7 +195,6 @@ export class EventsService extends PrismaClient implements OnModuleInit {
           ...(dateTo && { lte: new Date(dateTo) }),
         },
         ...(type && { eventType: type }),
-        ...(city && { city: { contains: city, mode: 'insensitive' } }),
       },
       orderBy: { startDate: 'asc' },
       take: limit,
