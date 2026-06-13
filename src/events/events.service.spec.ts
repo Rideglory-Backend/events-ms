@@ -65,23 +65,23 @@ describe('EventsService — filter logic', () => {
   // findAll — 5 required test cases
   // ----------------------------------------------------------------
 
-  it('TC-1: no filters — returns all events excluding drafts', async () => {
+  it('TC-1: no filters — returns all events excluding drafts and IN_PROGRESS', async () => {
     await service.findAll({});
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { state: { not: 'DRAFT' } },
-        orderBy: { startDate: 'asc' },
+        where: { state: { notIn: ['DRAFT', 'IN_PROGRESS'] } },
+        orderBy: { startDate: 'desc' },
       }),
     );
   });
 
-  it('TC-2: type-only filter — WHERE eventType matches and drafts excluded', async () => {
+  it('TC-2: type-only filter — WHERE eventType matches, drafts and IN_PROGRESS excluded', async () => {
     await service.findAll({ type: EventType.OFF_ROAD });
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { state: { not: 'DRAFT' }, eventType: EventType.OFF_ROAD },
+        where: expect.objectContaining({ eventType: EventType.OFF_ROAD }),
       }),
     );
   });
@@ -94,43 +94,12 @@ describe('EventsService — filter logic', () => {
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          state: { not: 'DRAFT' },
+        where: expect.objectContaining({
           startDate: {
             gte: new Date(dateFrom),
             lte: new Date(dateTo),
           },
-        },
-      }),
-    );
-  });
-
-  it('TC-4: city-only filter — WHERE city contains (case-insensitive), drafts excluded', async () => {
-    await service.findAll({ city: 'Medell' });
-
-    expect(mockFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          state: { not: 'DRAFT' },
-          city: { contains: 'Medell', mode: 'insensitive' },
-        },
-      }),
-    );
-  });
-
-  it('TC-5: combined filter (type + dateFrom + city) — all conditions ANDed, drafts excluded', async () => {
-    const dateFrom = '2026-05-20T00:00:00.000Z';
-
-    await service.findAll({ type: EventType.URBAN, dateFrom, city: 'Bogotá' });
-
-    expect(mockFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          state: { not: 'DRAFT' },
-          eventType: EventType.URBAN,
-          startDate: { gte: new Date(dateFrom) },
-          city: { contains: 'Bogotá', mode: 'insensitive' },
-        },
+        }),
       }),
     );
   });

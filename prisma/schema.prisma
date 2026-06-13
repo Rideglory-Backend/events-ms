@@ -62,7 +62,6 @@ model Event {
   ownerId          String
   name             String
   description      String
-  city             String
   startDate        DateTime
   endDate          DateTime?
   difficulty       EventDifficulty

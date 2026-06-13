@@ -35,7 +35,6 @@ async function main() {
       ownerId: SEED_USER_ID,
       name: 'Rodada Cordillera Oriental 2026',
       description: 'Recorrido épico por la cordillera oriental colombiana',
-      city: 'Bogotá',
       eventType: 'TOURISM',
       difficulty: 'MODERATE',
       state: 'SCHEDULED',
