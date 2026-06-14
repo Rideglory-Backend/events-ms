@@ -14,12 +14,12 @@ datasource db {
 }
 
 enum EventType {
-  TOURISM
-  URBAN
+  ON_ROAD
   OFF_ROAD
+  COURSE
+  TRACK_DAY
+  LEISURE
   COMPETITION
-  SOLIDARITY
-  SHORT_DISTANCE
 }
 
 enum EventDifficulty {
@@ -65,8 +65,6 @@ model Event {
   startDate        DateTime
   endDate          DateTime?
   difficulty       EventDifficulty
-  meetingPoint     String
-  destination      String
   meetingTime      DateTime
   eventType        EventType
   allowedBrands    String[]
