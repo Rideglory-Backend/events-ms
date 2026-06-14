@@ -124,13 +124,13 @@ describe('EventsService — filter logic', () => {
   });
 
   it('TC-7: findUpcoming with type filter — eventType present in WHERE, drafts excluded', async () => {
-    await service.findUpcoming({ type: EventType.SOLIDARITY }, 10);
+    await service.findUpcoming({ type: EventType.LEISURE }, 10);
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           state: { not: 'DRAFT' },
-          eventType: EventType.SOLIDARITY,
+          eventType: EventType.LEISURE,
         }),
         take: 10,
       }),

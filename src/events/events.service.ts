@@ -278,9 +278,16 @@ export class EventsService extends PrismaClient implements OnModuleInit {
   async remove(id: string) {
     await this.findOne(id);
 
-    return this.event.delete({
-      where: { id },
-    });
+    try {
+      return await this.event.delete({
+        where: { id },
+      });
+    } catch (error) {
+      throw new RpcException({
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: `Failed to delete event: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
   }
 
   // ── Tracking organizer controls ───────────────────────────────────────────────
