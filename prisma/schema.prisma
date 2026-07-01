@@ -58,27 +58,28 @@ enum BloodType {
 }
 
 model Event {
-  id               String              @id @default(uuid())
-  ownerId          String
-  name             String
-  description      String
-  startDate        DateTime
-  endDate          DateTime?
-  difficulty       EventDifficulty
-  meetingTime      DateTime
-  eventType        EventType
-  allowedBrands    String[]
-  waypoints        String[]            @default([])
-  price            Float?
-  maxParticipants  Int?
-  imageUrl         String?
-  state            EventState
-  routeGeoJson     Json?
-  sosTriggeredAt   DateTime?
-  reminderSentAt   DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt()
-  registrations    EventRegistration[]
+  id                                String              @id @default(uuid())
+  ownerId                           String
+  name                              String
+  description                       String
+  startDate                         DateTime
+  endDate                           DateTime?
+  difficulty                        EventDifficulty
+  meetingTime                       DateTime
+  eventType                         EventType
+  allowedBrands                     String[]
+  waypoints                         String[]            @default([])
+  price                             Float?
+  maxParticipants                   Int?
+  imageUrl                          String?
+  state                             EventState
+  routeGeoJson                      Json?
+  sosTriggeredAt                    DateTime?
+  reminderSentAt                    DateTime?
+  organizerAcceptedResponsibilityAt DateTime?
+  createdAt                         DateTime            @default(now())
+  updatedAt                         DateTime            @updatedAt()
+  registrations                     EventRegistration[]
 }
 
 model EventRegistration {
@@ -98,6 +99,10 @@ model EventRegistration {
   emergencyContactName  String
   emergencyContactPhone String
   vehicleId             String?
+  shareMedicalInfo      Boolean            @default(false)
+  allowOrganizerContact Boolean            @default(false)
+  riskAcceptedAt        DateTime?
+  riskAcceptanceVersion String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt()
 
