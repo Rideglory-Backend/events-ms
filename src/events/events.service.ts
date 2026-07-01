@@ -1,5 +1,5 @@
 import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { CreateEventDto, EventFilterDto, FindAllEventsPayloadDto, EventState, RegistrationStatus, UpdateEventDto } from '@rideglory/contracts';
+import { CreateEventDto, EventFilterDto, FindAllEventsPayloadDto, FindUpcomingEventsPayloadDto, EventState, RegistrationStatus, UpdateEventDto } from '@rideglory/contracts';
 import { Prisma, PrismaClient } from '../generated/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
@@ -185,21 +185,53 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     return this.withOwnerNames(events);
   }
 
-  async findUpcoming(filters: EventFilterDto = {}, limit = 5) {
-    const { type, dateFrom, dateTo } = filters;
-    const events = await this.event.findMany({
-      where: {
-        state: { not: EventState.DRAFT },
-        startDate: {
-          gte: dateFrom ? new Date(dateFrom) : new Date(),
-          ...(dateTo && { lte: new Date(dateTo) }),
-        },
-        ...(type && { eventType: type }),
-      },
-      orderBy: { startDate: 'asc' },
-      take: limit,
-    });
-    return this.withOwnerNames(events);
+  async findUpcoming(filters: FindUpcomingEventsPayloadDto = {}, limit = 5) {
+    const { type, dateFrom, dateTo, authUserId } = filters;
+    // dateFrom comes from the client (local date in YYYY-MM-DD format).
+    // Fallback to UTC midnight — acceptable only if the client didn't send it.
+    const todayStart = dateFrom ? new Date(dateFrom) : new Date(new Date().toISOString().substring(0, 10));
+
+    // 1. Eventos IN_PROGRESS en los que el usuario participa (owner o inscrito aprobado).
+    //    Se muestran primero independientemente de la fecha.
+    const activeEvents = authUserId
+      ? await this.event.findMany({
+          where: {
+            state: EventState.IN_PROGRESS,
+            OR: [
+              { ownerId: authUserId },
+              {
+                registrations: {
+                  some: { userId: authUserId, status: RegistrationStatus.APPROVED },
+                },
+              },
+            ],
+            ...(type && { eventType: type }),
+          },
+          orderBy: { startDate: 'asc' },
+        })
+      : [];
+
+    // 2. Próximos eventos SCHEDULED desde hoy, excluyendo los ya incluidos arriba.
+    const activeIds = new Set(activeEvents.map((e) => e.id));
+    const remaining = limit - activeEvents.length;
+    const scheduledEvents =
+      remaining > 0
+        ? await this.event.findMany({
+            where: {
+              state: { notIn: [EventState.DRAFT, EventState.IN_PROGRESS, EventState.FINISHED] },
+              startDate: {
+                gte: todayStart,
+                ...(dateTo && { lte: new Date(dateTo) }),
+              },
+              ...(type && { eventType: type }),
+              ...(activeIds.size > 0 && { id: { notIn: [...activeIds] } }),
+            },
+            orderBy: { startDate: 'asc' },
+            take: remaining,
+          })
+        : [];
+
+    return this.withOwnerNames([...activeEvents, ...scheduledEvents]);
   }
 
   async findOne(id: string) {
