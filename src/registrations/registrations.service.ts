@@ -14,7 +14,7 @@ import {
 } from '@rideglory/contracts';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { firstValueFrom, timeout } from 'rxjs';
-import { PrismaClient } from '../generated/prisma';
+import { EventState, PrismaClient } from '../generated/prisma';
 import { USERS_SERVICE, VEHICLES_SERVICE } from '../config';
 
 type VehicleSummary = {
@@ -60,6 +60,7 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
       });
     }
     await this.ensureUserHasNoActiveRegistration(eventId, userId);
+    this.ensureRiderIsAdult(data.birthDate);
     this.ensureVehicleIdForNonOwner(data.vehicleId, event.ownerId, userId);
     await this.validateAllowedBrands(event, data.vehicleId);
 
@@ -204,14 +205,15 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
   }
 
   async findByEvent(eventId: string) {
-    await this.ensureEventExists(eventId);
+    const event = await this.ensureEventExists(eventId);
 
     const registrations = await this.eventRegistration.findMany({
       where: { eventId },
       orderBy: { createdAt: 'asc' },
     });
 
-    return this.enrichRegistrationsWithVehicle(registrations);
+    const enriched = await this.enrichRegistrationsWithVehicle(registrations);
+    return enriched.map((registration) => this.applyPrivacyMask(registration, event));
   }
 
   async findMyRegistrationForEvent(eventId: string, userId: string) {
@@ -304,6 +306,21 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
         message: 'You already have an active registration for this event',
+      });
+    }
+  }
+
+  private ensureRiderIsAdult(birthDate: Date): void {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    if (age < 18) {
+      throw new RpcException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        message: 'UNDERAGE_RIDER',
       });
     }
   }
@@ -434,5 +451,43 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
 
     const vehicle = await this.fetchVehicleById(registration.vehicleId);
     return { ...registration, vehicleSummary: vehicle };
+  }
+
+  private applyPrivacyMask<
+    T extends {
+      shareMedicalInfo: boolean;
+      allowOrganizerContact: boolean;
+      eps: string;
+      medicalInsurance: string | null;
+      bloodType: string; // widened from Prisma's BloodType enum — sentinel is a plain string
+      emergencyContactName: string;
+      emergencyContactPhone: string;
+      phone: string;
+      identificationNumber: string;
+      email: string;
+      residenceCity: string;
+    },
+  >(
+    registration: T,
+    event: { state: EventState; sosTriggeredAt: Date | null },
+  ): T {
+    const medicalVisible =
+      event.state === EventState.IN_PROGRESS && registration.shareMedicalInfo === true;
+    const emergencyVisible = event.state === EventState.IN_PROGRESS;
+    const contactVisible = registration.allowOrganizerContact === true;
+    const sosVisible = event.sosTriggeredAt !== null;
+
+    return {
+      ...registration,
+      eps: medicalVisible ? registration.eps : '__NOT_SHARED__',
+      medicalInsurance: medicalVisible ? registration.medicalInsurance : '__NOT_SHARED__',
+      bloodType: medicalVisible ? registration.bloodType : '__NOT_SHARED__',
+      emergencyContactName: emergencyVisible ? registration.emergencyContactName : '••••',
+      emergencyContactPhone: emergencyVisible ? registration.emergencyContactPhone : '••••',
+      phone: contactVisible ? registration.phone : '••••',
+      identificationNumber: sosVisible ? registration.identificationNumber : '••••',
+      email: sosVisible ? registration.email : '••••',
+      residenceCity: sosVisible ? registration.residenceCity : '••••',
+    };
   }
 }
