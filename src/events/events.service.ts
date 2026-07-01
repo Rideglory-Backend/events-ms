@@ -1,5 +1,19 @@
-import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { CreateEventDto, EventFilterDto, FindAllEventsPayloadDto, FindUpcomingEventsPayloadDto, EventState, RegistrationStatus, UpdateEventDto } from '@rideglory/contracts';
+import {
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
+import {
+  CreateEventDto,
+  EventFilterDto,
+  FindAllEventsPayloadDto,
+  FindUpcomingEventsPayloadDto,
+  EventState,
+  RegistrationStatus,
+  UpdateEventDto,
+} from '@rideglory/contracts';
 import { Prisma, PrismaClient } from '../generated/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
@@ -12,7 +26,7 @@ import {
 
 @Injectable()
 export class EventsService extends PrismaClient implements OnModuleInit {
-  private logger = new Logger('Events Service')
+  private logger = new Logger('Events Service');
 
   constructor(
     @Inject(USERS_SERVICE) private readonly usersService: ClientProxy,
@@ -25,14 +39,15 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       adapter: new PrismaPg({ connectionString: url }),
     });
 
-
     this.logger.log('Database connected');
   }
 
   private async validateOwnerExists(ownerId: string) {
     try {
       await firstValueFrom(
-        this.usersService.send('findOneUser', { id: ownerId }).pipe(timeout(3000)),
+        this.usersService
+          .send('findOneUser', { id: ownerId })
+          .pipe(timeout(3000)),
       );
     } catch {
       throw new RpcException({
@@ -45,11 +60,15 @@ export class EventsService extends PrismaClient implements OnModuleInit {
   private async fetchOwnerName(ownerId: string): Promise<string | null> {
     try {
       const owner = (await firstValueFrom(
-        this.usersService.send('findOneUser', { id: ownerId }).pipe(timeout(3000)),
+        this.usersService
+          .send('findOneUser', { id: ownerId })
+          .pipe(timeout(3000)),
       )) as { fullName?: string | null } | null;
       return owner?.fullName ?? null;
     } catch (error) {
-      this.logger.warn(`Failed to resolve ownerName for ${ownerId}: ${String(error)}`);
+      this.logger.warn(
+        `Failed to resolve ownerName for ${ownerId}: ${String(error)}`,
+      );
       return null;
     }
   }
@@ -64,7 +83,9 @@ export class EventsService extends PrismaClient implements OnModuleInit {
   private async withOwnerNames<T extends { ownerId: string }>(
     events: T[],
   ): Promise<Array<T & { ownerName: string | null }>> {
-    const uniqueOwnerIds = Array.from(new Set(events.map((event) => event.ownerId)));
+    const uniqueOwnerIds = Array.from(
+      new Set(events.map((event) => event.ownerId)),
+    );
     const ownerNameById = new Map<string, string | null>();
     await Promise.all(
       uniqueOwnerIds.map(async (ownerId) => {
@@ -189,7 +210,9 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     const { type, dateFrom, dateTo, authUserId } = filters;
     // dateFrom comes from the client (local date in YYYY-MM-DD format).
     // Fallback to UTC midnight — acceptable only if the client didn't send it.
-    const todayStart = dateFrom ? new Date(dateFrom) : new Date(new Date().toISOString().substring(0, 10));
+    const todayStart = dateFrom
+      ? new Date(dateFrom)
+      : new Date(new Date().toISOString().substring(0, 10));
 
     // 1. Eventos IN_PROGRESS en los que el usuario participa (owner o inscrito aprobado).
     //    Se muestran primero independientemente de la fecha.
@@ -201,7 +224,10 @@ export class EventsService extends PrismaClient implements OnModuleInit {
               { ownerId: authUserId },
               {
                 registrations: {
-                  some: { userId: authUserId, status: RegistrationStatus.APPROVED },
+                  some: {
+                    userId: authUserId,
+                    status: RegistrationStatus.APPROVED,
+                  },
                 },
               },
             ],
@@ -218,7 +244,13 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       remaining > 0
         ? await this.event.findMany({
             where: {
-              state: { notIn: [EventState.DRAFT, EventState.IN_PROGRESS, EventState.FINISHED] },
+              state: {
+                notIn: [
+                  EventState.DRAFT,
+                  EventState.IN_PROGRESS,
+                  EventState.FINISHED,
+                ],
+              },
               startDate: {
                 gte: todayStart,
                 ...(dateTo && { lte: new Date(dateTo) }),
@@ -236,13 +268,13 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
   async findOne(id: string) {
     const event = await this.event.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!event) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: `Event with id ${id} not found`
+        message: `Event with id ${id} not found`,
       });
     }
 
@@ -324,7 +356,10 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
   // ── Tracking organizer controls ───────────────────────────────────────────────
 
-  async startTracking(eventId: string, authUserId: string): Promise<{ id: string; state: string }> {
+  async startTracking(
+    eventId: string,
+    authUserId: string,
+  ): Promise<{ id: string; state: string }> {
     const event = await this.findOne(eventId);
 
     if (event.ownerId !== authUserId) {
@@ -349,7 +384,10 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     return { id: updated.id, state: updated.state };
   }
 
-  async endTracking(eventId: string, authUserId: string): Promise<{ id: string; state: string }> {
+  async endTracking(
+    eventId: string,
+    authUserId: string,
+  ): Promise<{ id: string; state: string }> {
     const event = await this.findOne(eventId);
 
     if (event.ownerId !== authUserId) {
@@ -396,7 +434,13 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
     // Deduplication: if already triggered, no-op
     if (event.sosTriggeredAt !== null) {
-      return { triggered: false, fullName: '', phone: null, latitude: null, longitude: null };
+      return {
+        triggered: false,
+        fullName: '',
+        phone: null,
+        latitude: null,
+        longitude: null,
+      };
     }
 
     await this.event.update({
@@ -487,7 +531,10 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  async findEventsNeedingReminder(fromDate: Date, toDate: Date): Promise<Array<{ id: string; name: string }>> {
+  async findEventsNeedingReminder(
+    fromDate: Date,
+    toDate: Date,
+  ): Promise<Array<{ id: string; name: string }>> {
     return this.event.findMany({
       where: {
         startDate: { gte: fromDate, lte: toDate },
@@ -496,5 +543,33 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       },
       select: { id: true, name: true },
     });
+  }
+
+  // INTERNAL ONLY — called by scheduler cron, no owner check
+  async findActiveEventsOlderThan(
+    cutoffDate: Date,
+  ): Promise<Array<{ id: string }>> {
+    return this.event.findMany({
+      where: {
+        state: EventState.IN_PROGRESS,
+        startDate: { lte: cutoffDate },
+      },
+      select: { id: true },
+    });
+  }
+
+  // INTERNAL ONLY — idempotent, no owner check
+  async forceEndTracking(
+    eventId: string,
+  ): Promise<{ id: string; state: string }> {
+    const event = await this.event.findUnique({ where: { id: eventId } });
+    if (!event || event.state !== EventState.IN_PROGRESS) {
+      return { id: eventId, state: event?.state ?? 'UNKNOWN' };
+    }
+    const updated = await this.event.update({
+      where: { id: eventId },
+      data: { state: EventState.FINISHED },
+    });
+    return { id: updated.id, state: updated.state };
   }
 }

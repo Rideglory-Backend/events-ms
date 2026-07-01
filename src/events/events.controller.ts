@@ -1,11 +1,16 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { EventsService } from './events.service';
-import { CreateEventDto, FindAllEventsPayloadDto, FindUpcomingEventsPayloadDto, UpdateEventPayloadDto } from '@rideglory/contracts';
+import {
+  CreateEventDto,
+  FindAllEventsPayloadDto,
+  FindUpcomingEventsPayloadDto,
+  UpdateEventPayloadDto,
+} from '@rideglory/contracts';
 
 @Controller()
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) { }
+  constructor(private readonly eventsService: EventsService) {}
 
   @MessagePattern('createEvent')
   create(@Payload() createEventDto: CreateEventDto) {
@@ -35,7 +40,10 @@ export class EventsController {
 
   @MessagePattern('findOneEventForViewer')
   findOneForViewer(@Payload() payload: { id: string; authUserId: string }) {
-    return this.eventsService.findOneEventForViewer(payload.id, payload.authUserId);
+    return this.eventsService.findOneEventForViewer(
+      payload.id,
+      payload.authUserId,
+    );
   }
 
   @MessagePattern('publishEvent')
@@ -56,7 +64,10 @@ export class EventsController {
 
   @MessagePattern('trackingStart')
   startTracking(@Payload() payload: { eventId: string; authUserId: string }) {
-    return this.eventsService.startTracking(payload.eventId, payload.authUserId);
+    return this.eventsService.startTracking(
+      payload.eventId,
+      payload.authUserId,
+    );
   }
 
   @MessagePattern('trackingEnd')
@@ -90,10 +101,26 @@ export class EventsController {
   }
 
   @MessagePattern('findEventsNeedingReminder')
-  findEventsNeedingReminder(@Payload() payload: { fromDate: string; toDate: string }) {
+  findEventsNeedingReminder(
+    @Payload() payload: { fromDate: string; toDate: string },
+  ) {
     return this.eventsService.findEventsNeedingReminder(
       new Date(payload.fromDate),
       new Date(payload.toDate),
     );
+  }
+
+  // INTERNAL ONLY — no HTTP endpoint
+  @MessagePattern('findActiveEventsOlderThan')
+  findActiveEventsOlderThan(@Payload() payload: { cutoffDate: string }) {
+    return this.eventsService.findActiveEventsOlderThan(
+      new Date(payload.cutoffDate),
+    );
+  }
+
+  // INTERNAL ONLY — no HTTP endpoint
+  @MessagePattern('forceEndTracking')
+  forceEndTracking(@Payload() payload: { eventId: string }) {
+    return this.eventsService.forceEndTracking(payload.eventId);
   }
 }
