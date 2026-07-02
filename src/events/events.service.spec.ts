@@ -27,6 +27,7 @@ jest.mock('../config', () => ({
 const mockFindMany = jest.fn();
 const mockFindUnique = jest.fn();
 const mockUpdate = jest.fn();
+const mockCreate = jest.fn();
 const mockTransaction = jest.fn();
 const mockConnect = jest.fn().mockResolvedValue(undefined);
 
@@ -36,6 +37,7 @@ jest.mock('../generated/prisma', () => ({
       findMany: mockFindMany,
       findUnique: mockFindUnique,
       update: mockUpdate,
+      create: mockCreate,
     };
     $connect = mockConnect;
     $transaction = mockTransaction;
@@ -209,7 +211,9 @@ describe('EventsService — findActiveEventsOlderThan', () => {
     const cutoff = new Date();
     await service.findActiveEventsOlderThan(cutoff);
 
-    const callArg = mockFindMany.mock.calls[0][0];
+    const callArg = mockFindMany.mock.calls[0][0] as {
+      where: { state: EventState };
+    };
     // State must be strictly IN_PROGRESS; FINISHED is never in scope
     expect(callArg.where.state).toBe(EventState.IN_PROGRESS);
   });
@@ -291,5 +295,116 @@ describe('EventsService — forceEndTracking', () => {
 
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(result).toEqual({ id: eventId, state: 'UNKNOWN' });
+  });
+});
+
+// ----------------------------------------------------------------
+// create() / update() — organizerAcceptedResponsibilityAt persistence
+// (QA case 3.1)
+// ----------------------------------------------------------------
+
+describe('EventsService — organizerAcceptedResponsibilityAt persistence', () => {
+  let service: EventsService;
+
+  const ownerProfile = {
+    fullName: 'Jane Organizer',
+    identificationNumber: '123',
+    birthDate: new Date('1990-01-01'),
+    phone: '3000000000',
+    email: 'jane@example.com',
+    residenceCity: 'Bogotá',
+    eps: 'Sura',
+    medicalInsurance: null,
+    bloodType: 'O_POSITIVE',
+    emergencyContactName: 'John',
+    emergencyContactPhone: '3001111111',
+  };
+
+  // Stub for the ClientProxy `.send(...).pipe(...)` chain consumed by
+  // firstValueFrom() inside EventsService (owner lookup).
+  const observableOf = (value: unknown) => ({
+    pipe: jest.fn().mockReturnValue({
+      subscribe: (observer: {
+        next: (value: unknown) => void;
+        complete: () => void;
+      }) => {
+        observer.next(value);
+        observer.complete();
+      },
+    }),
+  });
+
+  beforeEach(() => {
+    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+    mockFindUnique.mockReset();
+    mockUpdate.mockReset();
+    mockCreate.mockReset();
+    mockTransaction.mockReset();
+    mockClientProxy.send.mockReset();
+
+    mockClientProxy.send.mockReturnValue(observableOf(ownerProfile));
+    mockTransaction.mockImplementation(
+      (callback: (tx: { event: { create: typeof mockCreate } }) => unknown) =>
+        Promise.resolve(callback({ event: { create: mockCreate } })),
+    );
+
+    service = new EventsService(mockClientProxy as any);
+  });
+
+  it('CASE 3.1 — create() persists organizerAcceptedResponsibilityAt in the payload sent to prisma.event.create', async () => {
+    const organizerAcceptedResponsibilityAt = new Date(
+      '2026-06-30T10:00:00.000Z',
+    );
+    mockCreate.mockResolvedValue({
+      id: 'evt-new',
+      ownerId: 'owner-1',
+      organizerAcceptedResponsibilityAt,
+    });
+
+    await service.create({
+      ownerId: 'owner-1',
+      name: 'Rodada',
+      description: 'desc',
+      startDate: new Date('2026-07-01T00:00:00.000Z'),
+      difficulty: 'EASY',
+      meetingTime: new Date('2026-07-01T00:00:00.000Z'),
+      eventType: 'LEISURE',
+      allowedBrands: [],
+      state: 'SCHEDULED',
+      organizerAcceptedResponsibilityAt,
+    } as any);
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizerAcceptedResponsibilityAt,
+        }),
+      }),
+    );
+  });
+
+  it('CASE 3.1 — update() persists organizerAcceptedResponsibilityAt in the payload sent to prisma.event.update', async () => {
+    const organizerAcceptedResponsibilityAt = new Date(
+      '2026-06-30T11:00:00.000Z',
+    );
+    mockFindUnique.mockResolvedValue({ id: 'evt-1', ownerId: 'owner-1' });
+    mockUpdate.mockResolvedValue({
+      id: 'evt-1',
+      ownerId: 'owner-1',
+      organizerAcceptedResponsibilityAt,
+    });
+
+    await service.update('evt-1', {
+      organizerAcceptedResponsibilityAt,
+    });
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'evt-1' },
+        data: expect.objectContaining({
+          organizerAcceptedResponsibilityAt,
+        }),
+      }),
+    );
   });
 });

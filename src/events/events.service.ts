@@ -563,7 +563,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
     eventId: string,
   ): Promise<{ id: string; state: string }> {
     const event = await this.event.findUnique({ where: { id: eventId } });
-    if (!event || event.state !== EventState.IN_PROGRESS) {
+    if (!event || (event.state as EventState) !== EventState.IN_PROGRESS) {
       return { id: eventId, state: event?.state ?? 'UNKNOWN' };
     }
     const updated = await this.event.update({
