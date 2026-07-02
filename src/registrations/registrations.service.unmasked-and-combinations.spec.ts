@@ -139,7 +139,7 @@ describe('RegistrationsService — self-view endpoints never mask (QA 5.1, 5.2)'
     expect(result!.identificationNumber).toBe('123456');
     expect(result!.email).toBe('jane@example.com');
     expect(result!.residenceCity).toBe('Bogotá');
-    expect(result!.eps).not.toBe('__NOT_SHARED__');
+    expect(result!.eps).not.toBe('••••');
     expect(result!.phone).not.toBe('••••');
   });
 
@@ -191,13 +191,18 @@ describe('RegistrationsService — applyPrivacyMask() combined conditions (QA 6A
 
     const [result] = await service.findByEvent(eventId);
 
-    expect(result.eps).toBe('__NOT_SHARED__');
-    expect(result.medicalInsurance).toBe('__NOT_SHARED__');
-    expect(result.bloodType).toBe('__NOT_SHARED__');
-    expect(result.phone).toBe('••••');
-    expect(result.identificationNumber).toBe('••••');
-    expect(result.email).toBe('••••');
-    expect(result.residenceCity).toBe('••••');
+    // Médicos: ocultos por completo.
+    expect(result.eps).toBe('••••');
+    expect(result.medicalInsurance).toBe('••••');
+    expect(result.bloodType).toBe('••••');
+    // Identidad/contacto: revelado parcial (primeros 4 visibles).
+    expect(result.phone).toBe('3001******');
+    expect(result.identificationNumber).toBe('1234**');
+    expect(result.email).toBe('jane************');
+    expect(result.emergencyContactPhone).toBe('3007******');
+    // Los nombres y la ciudad nunca se enmascaran.
+    expect(result.emergencyContactName).toBe('John Doe');
+    expect(result.residenceCity).toBe('Bogotá');
   });
 
   it('reveals every sensitive field when all 4 conditions are favorable at once (QA 6B.1)', async () => {

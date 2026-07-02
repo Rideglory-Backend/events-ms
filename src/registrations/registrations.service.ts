@@ -25,6 +25,11 @@ type VehicleSummary = {
   vin?: string | null;
 };
 
+/** Máscara total para datos completamente ocultos. */
+const FULL_MASK = '••••';
+/** Cantidad de caracteres iniciales visibles en un revelado parcial. */
+const PARTIAL_VISIBLE = 4;
+
 @Injectable()
 export class RegistrationsService extends PrismaClient implements OnModuleInit {
   private readonly logger = new Logger('Registrations Service');
@@ -479,15 +484,35 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
 
     return {
       ...registration,
-      eps: medicalVisible ? registration.eps : '__NOT_SHARED__',
-      medicalInsurance: medicalVisible ? registration.medicalInsurance : '__NOT_SHARED__',
-      bloodType: medicalVisible ? registration.bloodType : '__NOT_SHARED__',
-      emergencyContactName: emergencyVisible ? registration.emergencyContactName : '••••',
-      emergencyContactPhone: emergencyVisible ? registration.emergencyContactPhone : '••••',
-      phone: contactVisible ? registration.phone : '••••',
-      identificationNumber: sosVisible ? registration.identificationNumber : '••••',
-      email: sosVisible ? registration.email : '••••',
-      residenceCity: sosVisible ? registration.residenceCity : '••••',
+      // Los datos médicos son los más sensibles: se ocultan por completo.
+      eps: medicalVisible ? registration.eps : FULL_MASK,
+      medicalInsurance: medicalVisible ? registration.medicalInsurance : FULL_MASK,
+      bloodType: medicalVisible ? registration.bloodType : FULL_MASK,
+      // Los nombres nunca se enmascaran.
+      // Identidad/contacto: revelado parcial (primeros caracteres visibles).
+      emergencyContactPhone: emergencyVisible
+        ? registration.emergencyContactPhone
+        : this.maskTail(registration.emergencyContactPhone),
+      phone: contactVisible ? registration.phone : this.maskTail(registration.phone),
+      identificationNumber: sosVisible
+        ? registration.identificationNumber
+        : this.maskTail(registration.identificationNumber),
+      email: sosVisible ? registration.email : this.maskTail(registration.email),
+      // La ciudad de residencia nunca se enmascara.
     };
+  }
+
+  /**
+   * Revelado parcial: deja visibles los primeros `visible` caracteres y
+   * reemplaza el resto por asteriscos (p. ej. `1004******`). Si el valor es
+   * demasiado corto para dejar al menos 2 caracteres ocultos, se enmascara
+   * por completo para no revelar casi todo.
+   */
+  private maskTail(value: string | null | undefined, visible = PARTIAL_VISIBLE): string {
+    const trimmed = (value ?? '').trim();
+    if (trimmed.length <= visible + 1) {
+      return FULL_MASK;
+    }
+    return trimmed.slice(0, visible) + '*'.repeat(trimmed.length - visible);
   }
 }

@@ -109,7 +109,7 @@ describe('RegistrationsService — findByEvent() applyPrivacyMask()', () => {
     );
   });
 
-  it('masks medical fields with __NOT_SHARED__ when event is SCHEDULED, regardless of shareMedicalInfo', async () => {
+  it('masks medical fields with •••• when event is SCHEDULED, regardless of shareMedicalInfo', async () => {
     mockEventFindUnique.mockResolvedValue({
       id: eventId,
       state: 'SCHEDULED',
@@ -121,9 +121,9 @@ describe('RegistrationsService — findByEvent() applyPrivacyMask()', () => {
 
     const [result] = await service.findByEvent(eventId);
 
-    expect(result.eps).toBe('__NOT_SHARED__');
-    expect(result.medicalInsurance).toBe('__NOT_SHARED__');
-    expect(result.bloodType).toBe('__NOT_SHARED__');
+    expect(result.eps).toBe('••••');
+    expect(result.medicalInsurance).toBe('••••');
+    expect(result.bloodType).toBe('••••');
     expect(result.vehicleSummary).toEqual({ id: 'vehicle-1', brand: 'Honda' });
   });
 
@@ -156,12 +156,12 @@ describe('RegistrationsService — findByEvent() applyPrivacyMask()', () => {
 
     const [result] = await service.findByEvent(eventId);
 
-    expect(result.eps).toBe('__NOT_SHARED__');
-    expect(result.medicalInsurance).toBe('__NOT_SHARED__');
-    expect(result.bloodType).toBe('__NOT_SHARED__');
+    expect(result.eps).toBe('••••');
+    expect(result.medicalInsurance).toBe('••••');
+    expect(result.bloodType).toBe('••••');
   });
 
-  it('masks phone with •••• when allowOrganizerContact is false, and reveals it when true', async () => {
+  it('partially masks phone (first 4 visible) when allowOrganizerContact is false, and reveals it when true', async () => {
     mockEventFindUnique.mockResolvedValue({
       id: eventId,
       state: 'SCHEDULED',
@@ -174,11 +174,11 @@ describe('RegistrationsService — findByEvent() applyPrivacyMask()', () => {
 
     const [maskedResult, revealedResult] = await service.findByEvent(eventId);
 
-    expect(maskedResult.phone).toBe('••••');
+    expect(maskedResult.phone).toBe('3001******');
     expect(revealedResult.phone).toBe('3001234567');
   });
 
-  it('masks identificationNumber, email and residenceCity when sosTriggeredAt is null, reveals when set', async () => {
+  it('partially masks identificationNumber and email (first 4 visible) when sosTriggeredAt is null, never masks residenceCity, reveals when set', async () => {
     mockEventFindUnique.mockResolvedValue({
       id: eventId,
       state: 'SCHEDULED',
@@ -188,9 +188,10 @@ describe('RegistrationsService — findByEvent() applyPrivacyMask()', () => {
 
     const [maskedResult] = await service.findByEvent(eventId);
 
-    expect(maskedResult.identificationNumber).toBe('••••');
-    expect(maskedResult.email).toBe('••••');
-    expect(maskedResult.residenceCity).toBe('••••');
+    expect(maskedResult.identificationNumber).toBe('1234**');
+    expect(maskedResult.email).toBe('jane************');
+    // La ciudad de residencia nunca se enmascara.
+    expect(maskedResult.residenceCity).toBe('Bogotá');
 
     mockEventFindUnique.mockResolvedValue({
       id: eventId,
