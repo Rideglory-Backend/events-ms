@@ -211,9 +211,10 @@ describe('EventsService — findActiveEventsOlderThan', () => {
     const cutoff = new Date();
     await service.findActiveEventsOlderThan(cutoff);
 
-    const callArg = mockFindMany.mock.calls[0][0] as {
-      where: { state: EventState };
-    };
+    const calls = mockFindMany.mock.calls as Array<
+      [{ where: { state: EventState } }]
+    >;
+    const callArg = calls[0][0];
     // State must be strictly IN_PROGRESS; FINISHED is never in scope
     expect(callArg.where.state).toBe(EventState.IN_PROGRESS);
   });
@@ -228,9 +229,10 @@ describe('EventsService — findActiveEventsOlderThan', () => {
     const result = await service.findActiveEventsOlderThan(cutoff);
 
     // Verify the query passes the correct cutoff
-    const callArg = mockFindMany.mock.calls[0][0] as {
-      where: { startDate: { lte: Date } };
-    };
+    const calls = mockFindMany.mock.calls as Array<
+      [{ where: { startDate: { lte: Date } } }]
+    >;
+    const callArg = calls[0][0];
     expect(callArg.where.startDate.lte).toEqual(cutoff);
 
     // Prove mathematically that a 23h-old event is outside the window:
