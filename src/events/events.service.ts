@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import {
   CreateEventDto,
-  EventFilterDto,
   FindAllEventsPayloadDto,
   FindUpcomingEventsPayloadDto,
   EventState,
@@ -288,7 +287,10 @@ export class EventsService extends PrismaClient implements OnModuleInit {
 
   async findOneEventForViewer(id: string, authUserId: string) {
     const event = await this.findOne(id);
-    if (event.state === EventState.DRAFT && event.ownerId !== authUserId) {
+    if (
+      (event.state as EventState) === EventState.DRAFT &&
+      event.ownerId !== authUserId
+    ) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
         message: `Event with id ${id} not found`,
@@ -305,7 +307,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
         message: 'Only the event organizer can publish this event',
       });
     }
-    if (event.state !== EventState.DRAFT) {
+    if ((event.state as EventState) !== EventState.DRAFT) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
         message: `Cannot publish: event state is ${event.state}, expected DRAFT`,
@@ -369,7 +371,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       });
     }
 
-    if (event.state !== EventState.SCHEDULED) {
+    if ((event.state as EventState) !== EventState.SCHEDULED) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
         message: `Cannot start tracking: event state is ${event.state}, expected SCHEDULED`,
@@ -397,7 +399,7 @@ export class EventsService extends PrismaClient implements OnModuleInit {
       });
     }
 
-    if (event.state !== EventState.IN_PROGRESS) {
+    if ((event.state as EventState) !== EventState.IN_PROGRESS) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
         message: `Cannot end tracking: event state is ${event.state}, expected IN_PROGRESS`,
