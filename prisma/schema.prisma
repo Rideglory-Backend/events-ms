@@ -103,6 +103,8 @@ model EventRegistration {
   allowOrganizerContact Boolean            @default(false)
   riskAcceptedAt        DateTime?
   riskAcceptanceVersion String?
+  medicalConsentAcceptedAt DateTime?
+  medicalConsentVersion    String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt()
 

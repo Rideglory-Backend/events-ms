@@ -95,6 +95,8 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
       allowOrganizerContact: data.allowOrganizerContact ?? false,
       riskAcceptedAt: data.riskAcceptedAt ?? null,
       riskAcceptanceVersion: data.riskAcceptanceVersion ?? null,
+      medicalConsentAcceptedAt: data.medicalConsentAcceptedAt ?? null,
+      medicalConsentVersion: data.medicalConsentVersion ?? null,
     };
 
     const createdRegistration = await this.eventRegistration.upsert({

@@ -113,8 +113,9 @@ describe('RegistrationsService — create() medical consent / risk fields', () =
     );
   });
 
-  it('persists shareMedicalInfo, allowOrganizerContact, riskAcceptedAt and riskAcceptanceVersion when present in the payload', async () => {
+  it('persists shareMedicalInfo, allowOrganizerContact, risk and medical consent fields when present in the payload', async () => {
     const riskAcceptedAt = new Date('2026-06-30T12:00:00.000Z');
+    const medicalConsentAcceptedAt = new Date('2026-06-30T12:05:00.000Z');
 
     await service.create({
       ...basePayload,
@@ -122,6 +123,8 @@ describe('RegistrationsService — create() medical consent / risk fields', () =
       allowOrganizerContact: true,
       riskAcceptedAt,
       riskAcceptanceVersion: 'v1',
+      medicalConsentAcceptedAt,
+      medicalConsentVersion: 'v1',
     } as any);
 
     expect(mockUpsert).toHaveBeenCalledWith(
@@ -131,18 +134,22 @@ describe('RegistrationsService — create() medical consent / risk fields', () =
           allowOrganizerContact: true,
           riskAcceptedAt,
           riskAcceptanceVersion: 'v1',
+          medicalConsentAcceptedAt,
+          medicalConsentVersion: 'v1',
         }),
         update: expect.objectContaining({
           shareMedicalInfo: true,
           allowOrganizerContact: true,
           riskAcceptedAt,
           riskAcceptanceVersion: 'v1',
+          medicalConsentAcceptedAt,
+          medicalConsentVersion: 'v1',
         }),
       }),
     );
   });
 
-  it('defaults shareMedicalInfo/allowOrganizerContact to false and riskAcceptedAt/riskAcceptanceVersion to null when omitted', async () => {
+  it('defaults shareMedicalInfo/allowOrganizerContact to false and risk/medical consent fields to null when omitted', async () => {
     await service.create({ ...basePayload } as any);
 
     expect(mockUpsert).toHaveBeenCalledWith(
@@ -152,6 +159,8 @@ describe('RegistrationsService — create() medical consent / risk fields', () =
           allowOrganizerContact: false,
           riskAcceptedAt: null,
           riskAcceptanceVersion: null,
+          medicalConsentAcceptedAt: null,
+          medicalConsentVersion: null,
         }),
       }),
     );
