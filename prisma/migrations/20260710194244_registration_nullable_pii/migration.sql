@@ -1,0 +1,9 @@
+-- AlterTable
+ALTER TABLE "EventRegistration" ALTER COLUMN "identificationNumber" DROP NOT NULL,
+ALTER COLUMN "birthDate" DROP NOT NULL,
+ALTER COLUMN "phone" DROP NOT NULL,
+ALTER COLUMN "email" DROP NOT NULL,
+ALTER COLUMN "residenceCity" DROP NOT NULL,
+ALTER COLUMN "eps" DROP NOT NULL,
+ALTER COLUMN "emergencyContactName" DROP NOT NULL,
+ALTER COLUMN "emergencyContactPhone" DROP NOT NULL;

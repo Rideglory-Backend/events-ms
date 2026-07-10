@@ -88,16 +88,16 @@ model EventRegistration {
   userId                String
   status                RegistrationStatus @default(PENDING)
   fullName              String
-  identificationNumber  String
-  birthDate             DateTime
-  phone                 String
-  email                 String
-  residenceCity         String
-  eps                   String
+  identificationNumber  String?
+  birthDate             DateTime?
+  phone                 String?
+  email                 String?
+  residenceCity         String?
+  eps                   String?
   medicalInsurance      String?
   bloodType             BloodType
-  emergencyContactName  String
-  emergencyContactPhone String
+  emergencyContactName  String?
+  emergencyContactPhone String?
   vehicleId             String?
   shareMedicalInfo      Boolean            @default(false)
   allowOrganizerContact Boolean            @default(false)

@@ -29,6 +29,12 @@ type VehicleSummary = {
 const FULL_MASK = '••••';
 /** Cantidad de caracteres iniciales visibles en un revelado parcial. */
 const PARTIAL_VISIBLE = 4;
+/**
+ * Nombre que reemplaza `fullName` cuando el usuario elimina su cuenta. Es un
+ * mecanismo de anonimización permanente, distinto e independiente de
+ * `FULL_MASK` (enmascarado reversible en runtime según `shareMedicalInfo`).
+ */
+const ANONYMIZED_FULL_NAME = 'Usuario eliminado';
 
 @Injectable()
 export class RegistrationsService extends PrismaClient implements OnModuleInit {
@@ -129,18 +135,18 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
       await this.persistRiderProfile(userId, {
         fullName: data.fullName ?? existing.fullName,
         identificationNumber:
-          data.identificationNumber ?? existing.identificationNumber,
-        birthDate: data.birthDate ?? existing.birthDate,
-        phone: data.phone ?? existing.phone,
-        residenceCity: data.residenceCity ?? existing.residenceCity,
-        eps: data.eps ?? existing.eps,
+          data.identificationNumber ?? existing.identificationNumber ?? undefined,
+        birthDate: data.birthDate ?? existing.birthDate ?? undefined,
+        phone: data.phone ?? existing.phone ?? undefined,
+        residenceCity: data.residenceCity ?? existing.residenceCity ?? undefined,
+        eps: data.eps ?? existing.eps ?? undefined,
         medicalInsurance:
           data.medicalInsurance ?? existing.medicalInsurance ?? undefined,
         bloodType: (data.bloodType ?? existing.bloodType) as BloodType,
         emergencyContactName:
-          data.emergencyContactName ?? existing.emergencyContactName,
+          data.emergencyContactName ?? existing.emergencyContactName ?? undefined,
         emergencyContactPhone:
-          data.emergencyContactPhone ?? existing.emergencyContactPhone,
+          data.emergencyContactPhone ?? existing.emergencyContactPhone ?? undefined,
       }).catch((error) =>
         this.logger.warn(
           `saveToProfile failed for user ${userId}: ${this.describeError(error)}`,
@@ -245,6 +251,35 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
     return this.enrichRegistrationsWithVehicle(registrations);
   }
 
+  /**
+   * Anonimiza permanentemente los datos personales de todas las
+   * `EventRegistration` de un usuario que eliminó su cuenta, preservando la
+   * evidencia legal de aceptación de consentimientos (timestamp + versión,
+   * sin nombre asociado). No toca `bloodType` ni `Event`. Filtra por
+   * `EventRegistration.userId`, nunca por `Event.ownerId`. Idempotente: una
+   * segunda llamada para el mismo `userId` no falla y deja el mismo estado.
+   */
+  async anonymizeByUserId(userId: string): Promise<{ count: number }> {
+    const { count } = await this.eventRegistration.updateMany({
+      where: { userId },
+      data: {
+        fullName: ANONYMIZED_FULL_NAME,
+        identificationNumber: null,
+        birthDate: null,
+        phone: null,
+        email: null,
+        residenceCity: null,
+        eps: null,
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+        shareMedicalInfo: false,
+        allowOrganizerContact: false,
+      },
+    });
+
+    return { count };
+  }
+
   private async changeStatus(
     registrationId: string,
     status: RegistrationStatus,
@@ -334,19 +369,20 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
 
   private async persistRiderProfile(
     userId: string,
-    rider: Pick<
-      CreateRegistrationPayloadDto,
-      | 'fullName'
-      | 'identificationNumber'
-      | 'birthDate'
-      | 'phone'
-      | 'residenceCity'
-      | 'eps'
-      | 'medicalInsurance'
-      | 'bloodType'
-      | 'emergencyContactName'
-      | 'emergencyContactPhone'
-    >,
+    rider: Partial<
+      Pick<
+        CreateRegistrationPayloadDto,
+        | 'identificationNumber'
+        | 'birthDate'
+        | 'phone'
+        | 'residenceCity'
+        | 'eps'
+        | 'medicalInsurance'
+        | 'emergencyContactName'
+        | 'emergencyContactPhone'
+      >
+    > &
+      Pick<CreateRegistrationPayloadDto, 'fullName' | 'bloodType'>,
   ) {
     await firstValueFrom(
       this.usersService
@@ -464,15 +500,15 @@ export class RegistrationsService extends PrismaClient implements OnModuleInit {
     T extends {
       shareMedicalInfo: boolean;
       allowOrganizerContact: boolean;
-      eps: string;
+      eps: string | null;
       medicalInsurance: string | null;
       bloodType: string; // widened from Prisma's BloodType enum — sentinel is a plain string
-      emergencyContactName: string;
-      emergencyContactPhone: string;
-      phone: string;
-      identificationNumber: string;
-      email: string;
-      residenceCity: string;
+      emergencyContactName: string | null;
+      emergencyContactPhone: string | null;
+      phone: string | null;
+      identificationNumber: string | null;
+      email: string | null;
+      residenceCity: string | null;
     },
   >(
     registration: T,
