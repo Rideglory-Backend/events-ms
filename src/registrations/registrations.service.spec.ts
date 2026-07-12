@@ -29,6 +29,7 @@ jest.mock('../config', () => ({
 const mockUpsert = jest.fn();
 const mockFindFirst = jest.fn();
 const mockEventFindUnique = jest.fn();
+const mockUpdateMany = jest.fn();
 const mockConnect = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('../generated/prisma', () => ({
@@ -36,6 +37,7 @@ jest.mock('../generated/prisma', () => ({
     eventRegistration = {
       upsert: mockUpsert,
       findFirst: mockFindFirst,
+      updateMany: mockUpdateMany,
     };
     event = {
       findUnique: mockEventFindUnique,
@@ -164,5 +166,44 @@ describe('RegistrationsService — create() medical consent / risk fields', () =
         }),
       }),
     );
+  });
+});
+
+describe('RegistrationsService.anonymizeByUserId — regression (eliminacion-cuenta-phase-04, already idempotent)', () => {
+  let service: RegistrationsService;
+
+  beforeEach(() => {
+    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+    mockUpdateMany.mockReset();
+
+    service = new RegistrationsService(
+      mockUsersService as any,
+      mockVehiclesService as any,
+    );
+  });
+
+  it('is already idempotent via updateMany — running it twice yields count:0 on the second run, without error', async () => {
+    mockUpdateMany.mockResolvedValueOnce({ count: 2 });
+
+    const first = await service.anonymizeByUserId(userId);
+    expect(first).toEqual({ count: 2 });
+
+    // Second run: rows are already anonymized, so a real DB would match
+    // fewer/no rows against `where: { userId }` update criteria that are
+    // idempotent (setting the same anonymized values again is a no-op).
+    mockUpdateMany.mockResolvedValueOnce({ count: 0 });
+    const second = await service.anonymizeByUserId(userId);
+
+    expect(second).toEqual({ count: 0 });
+    expect(mockUpdateMany).toHaveBeenCalledTimes(2);
+    expect(mockUpdateMany.mock.calls[1][0]).toEqual({
+      where: { userId },
+      data: expect.objectContaining({
+        identificationNumber: null,
+        birthDate: null,
+        phone: null,
+        email: null,
+      }),
+    });
   });
 });
